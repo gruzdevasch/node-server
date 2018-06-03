@@ -1,0 +1,209 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Доска объявлений</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" >
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" ></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <style>
+    .card-columns {
+      @include media-breakpoint-only(lg) {
+       column-count: 4;
+       }
+    </style>
+</head>
+<body>
+  <h2>Поиск объявления</h2>
+    <form name="searchForm" class="form-inline"> 
+            <input class="form-control" name="searchtext" placeholder="Текст" />
+         <div class="panel-body">
+            <a id="search" class="btn btn-sm btn-primary">Найти</a>
+            <a id="searchreset" class="btn btn-sm btn-danger">Отмена</a>
+        </div>
+    </form>
+<h2>Добавить объявление</h2>
+    <form name="bulForm" class="form-inline">
+        <input type="hidden" name="id" value="0" />
+ 
+            <input class="form-control" name="text" placeholder="Текст" />
+
+            <input class="form-control" name="picurl" placeholder="Ссылка на изображение" />
+ 
+        <div class="panel-body">
+            <button type="submit" class="btn btn-sm btn-success">Сохранить</button>
+            <a id="reset" class="btn btn-sm btn-danger">Сбросить</a>
+        </div>
+    </form>
+    <h2>Объявления</h2>
+<div class="card-columns">
+
+    <div class=" card-deck-wrapper tabs ">
+    </div></div>
+<div class="card-columns">
+
+    <div class=" card-deck-wrapper searchtabs ">
+    </div></div>
+</br>
+
+
+   
+  
+    <script>
+        // Получение всех пользователей
+        function GetBuls() {
+            $.ajax({
+                url: "/api/buls",
+                type: "GET",
+                contentType: "application/json",
+                success: function (buls) {
+                    var rows = "";
+                    $.each(buls, function (index, bul) {
+                        // добавляем полученные элементы в таблицу
+                        rows += row(bul);
+                    })
+                    $(".tabs ").append(rows);
+                 }
+            });
+        }
+       function SearchBuls(stext) {
+            $.ajax({
+                url: "/api/buls/"+stext,
+                type: "GET",
+                contentType: "application/json",
+                success: function (buls) {
+                    var rows = "";
+                    $.each(buls, function (index, bul) {
+                        // добавляем полученные элементы в таблицу
+                        rows += row(bul);
+                    })
+                    $(".tabs").hide();
+                    $(".searchtabs").append(rows);
+                 }
+            });
+        }
+        // Получение одного объявления
+        function GetBul(id) {
+            $.ajax({
+                url: "/api/buls/"+id,
+                type: "GET",
+                contentType: "application/json",
+                success: function (bul) {
+                    var form = document.forms["bulForm"];
+                    form.elements["id"].value = bul._id;
+                    form.elements["text"].value = bul.text;
+                    form.elements["picurl"].value = bul.picurl;
+                }
+            });
+        }
+        // Добавление объявления
+        function CreateBul(text, picurl) {
+            $.ajax({
+                url: "api/buls",
+                contentType: "application/json",
+                method: "POST",
+                data: JSON.stringify({
+                    text: text,
+                    url: picurl
+                }),
+                success: function (bul) {
+                    reset();
+                    $(".tabs ").append(row(bul));
+                }
+            })
+        }
+        // Изменение объявления
+        function EditBul(bulId, text, picurl) {
+            $.ajax({
+                url: "api/buls",
+                contentType: "application/json",
+                method: "PUT",
+                data: JSON.stringify({
+                    id: bulId,
+                    text: text,
+                    url: picurl
+                }),
+                success: function (bul) {
+                    reset();
+                    console.log(bul);
+                    $(".card[data-rowid='" + bul._id + "']").replaceWith(row(bul));
+                }
+            })
+        }
+  
+        // сброс формы
+        function reset() {
+            var form = document.forms["bulForm"];
+            form.reset();
+            form.elements["id"].value = 0;
+        }
+  
+        // Удаление объявления
+        function DeleteBul(id) {
+            $.ajax({
+                url: "api/buls/"+id,
+                contentType: "application/json",
+                method: "DELETE",
+                success: function (bul) {
+                    console.log(bul);
+                    $(".card[data-rowid='" + bul._id + "']").remove();
+                }
+            })
+        }
+        // создание строки для таблицы
+        var row = function (bul) {
+            return "<div class='card mb-4' data-rowid='" + bul._id + "' style='width:18rem;' >  <img style='width:100%;' class='card-img-top' src="+ bul.picurl +" >" +
+                    "<div class='card-body'> <p class='card-text'>"+ bul.text +"</p> </div>" +
+                    "<a class='editLink' data-id='" + bul._id + "'>Изменить</a> " +
+                    "<a class='removeLink' data-id='" + bul._id + "'>Удалить</a> </div>";
+        }
+
+        // сброс значений формы
+        $("#reset").click(function (e) {
+  
+            e.preventDefault();
+            reset();
+        })
+        $("#searchreset").click(function (e) {
+  
+            e.preventDefault();
+            document.forms["searchForm"].reset();
+                    $(".tabs").show();
+                    $(".searchtabs").empty();
+        })
+        $("#search").click(function (e) {
+  
+            e.preventDefault();
+            var text = searchForm.elements["searchtext"].value;
+            SearchBuls(text);
+        })
+        // отправка формы
+        $("form").submit(function (e) {
+            e.preventDefault();
+            var id = this.elements["id"].value;
+            var text = this.elements["text"].value;
+            var picurl = this.elements["picurl"].value;
+            if (id == 0)
+                CreateBul(text, picurl);
+            else
+                EditBul(id, text, picurl);
+        });
+  
+        // нажимаем на ссылку Изменить
+        $("body").on("click", ".editLink", function () {
+            var id = $(this).data("id");
+            GetBul(id);
+        })
+        // нажимаем на ссылку Удалить
+        $("body").on("click", ".removeLink", function () {
+            var id = $(this).data("id");
+            DeleteBul(id);
+        })
+
+                    $(".tabs").empty();
+        // загрузка объявлений
+        GetBuls();
+    </script>
+</body>
+</html>
